@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PradeoDevApp</string>
+    <!-- get installed apps -->
+    <string name="listeApp">Applications téléchargées</string>
+</resources>
