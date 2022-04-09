@@ -1,95 +1,79 @@
 package fr.nohas.pradeodevapp
 
-
-import android.app.admin.SecurityLog
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.ListView
-import android.widget.TextView
+import android.view.View
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import java.io.*
-import java.math.BigInteger
-import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
+import com.kanishka.virustotal.dto.VirusScanInfo
+import com.kanishka.virustotal.exception.APIKeyNotFoundException
+import com.kanishka.virustotal.exception.UnauthorizedAccessException
+import com.kanishka.virustotalv2.VirusTotalConfig
+import com.kanishka.virustotalv2.VirustotalPublicV2
+import com.kanishka.virustotalv2.VirustotalPublicV2Impl
+import java.io.File
+import java.io.UnsupportedEncodingException
+import java.util.*
+import kotlin.concurrent.timerTask
 
-//import virustotalapi.VirusTotal
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var textView :TextView
+    private lateinit var bttScan :Button
     private lateinit var bttAppsInstalled :Button
-    private lateinit var listeView :ListView
-    @JvmField val TAG_APP_PROCESS_START=SecurityLog.TAG_APP_PROCESS_START
+    private lateinit var horizontalPB :ProgressBar
+    private var count : Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         bttAppsInstalled = findViewById(R.id.bt_appInstalled)
-        listeView = findViewById(R.id.main_liste_view)
-        textView = findViewById(R.id.et_number)
+        bttScan = findViewById(R.id.bt_scan)
+        horizontalPB = findViewById(R.id.progressBarH)
+
 
         bttAppsInstalled.setOnClickListener{
-            buttonGetInstalledAppsList();
-        }
-    }
-    fun buttonGetInstalledAppsList (){
-        val listApplicationInfo : List<ApplicationInfo>  = packageManager.getInstalledApplications(PackageManager.GET_META_DATA) //liste de tt les app installer
-
-        val stringList : ArrayList<String> = ArrayList<String>(listApplicationInfo.size) // sert pour l'affichage
-        val pathList : ArrayList<String> = ArrayList<String>()
-        textView.setText("Nombre d'application installer= "+listApplicationInfo.size)
-
-        for(app in listApplicationInfo){
-                stringList.add(app.packageName)
-                pathList.add(app.sourceDir)
-            System.out.println("LA "+calculateMD5(app.sourceDir))
+           val intent1 = Intent(this, AffichageActivity::class.java) //buttonGetInstalledAppsList();
+            startActivity(intent1)
         }
 
-        val adapter= ArrayAdapter(this,android.R.layout.simple_list_item_1,stringList)
-        listeView.adapter=adapter
+        //button qui déclenche la service
+        bttScan.setOnClickListener {
+            Toast.makeText(this, "L'annalyse commence...", Toast.LENGTH_SHORT).show()
 
-    }
 
+            horizontalPB.visibility = View.VISIBLE
+            val timer= Timer()
+            val intent = Intent(this, AnnalyseActivity::class.java)
+            timer.schedule(object : TimerTask(){
+               override fun run(){
+                   count++
+                   horizontalPB.progress=count
+                   if(count > 100){
+                       timer.cancel()
+                       startActivity(intent)
+                       finish()
+                   }
+               }
+            },0,100)
 
-    private fun calculateMD5(pathFile :String): String? {
-        val file: File = File(pathFile)
-        val digest: MessageDigest
-        digest = try {
-            MessageDigest.getInstance("MD5")
-        } catch (e: NoSuchAlgorithmException) {
-            return null
-        }
-        val `is`: InputStream
-        try {
-            `is` = FileInputStream(file)
-        } catch (e: FileNotFoundException) {
-            return null
-        }
-        val buffer = ByteArray(`is`.available())
-        var read: Int
-        return try {
-            while (`is`.read(buffer).also { read = it } > 0) {
-                digest.update(buffer, 0, read)
-            }
-            val md5sum: ByteArray = digest.digest()
-            val bigInt = BigInteger(1, md5sum)
-            var output: String = bigInt.toString(16)
-            output = String.format("%32s", output).replace(' ', '0')
-            output
-        } catch (e: IOException) {
-            throw RuntimeException("Unable to process file for MD5", e)
-        } finally {
-            try {
-                `is`.close()
-            } catch (e: IOException) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                this.startForegroundService(Intent(this, MyService2::class.java))
+            } else {
+                this.startService(Intent(this, MyService2::class.java))
             }
         }
-    }
-    
-    private fun testVirusTotal(){
-        
+
+        /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            this.startForegroundService(Intent(this, MyService::class.java))
+        } else {
+            this.startService(Intent(this, MyService::class.java))
+        }*/
     }
 }
+
+
