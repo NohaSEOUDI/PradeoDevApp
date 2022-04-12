@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
-import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -20,10 +19,17 @@ import com.kanishka.virustotal.exception.UnauthorizedAccessException
 import com.kanishka.virustotalv2.VirusTotalConfig
 import com.kanishka.virustotalv2.VirustotalPublicV2
 import com.kanishka.virustotalv2.VirustotalPublicV2Impl
+import java.io.BufferedReader
+import java.io.FileInputStream
+import java.io.InputStreamReader
 import java.io.UnsupportedEncodingException
 
+//Service 2 qui utilise les fonction de l'api virusTotal
 class MyService2 : Service() {
     val TAG = "Myservice2"
+    var isPositive:Int = 0
+
+
     override fun onBind(intent: Intent): IBinder? {
         return null
     }
@@ -31,7 +37,7 @@ class MyService2 : Service() {
         Log.d(TAG,"onCreate")
         super.onCreate()
         startForeground()
-        // calcul()
+
     }
     override fun onDestroy() {
         Log.d(TAG,"onDestroy")
@@ -41,35 +47,52 @@ class MyService2 : Service() {
         Log.d(TAG,"onStratCommand")
         val runnable= Runnable {
             getFileScanReport()
+            goToActivity()
             stopSelf()
         }
         val thread=Thread(runnable)
         thread.start()
+
+
         return super.onStartCommand(intent, flags, startId)
     }
+    //méthode sert à faire la communication avec l'activity
+    private fun goToActivity(){
+        val dialog = Intent("Action")//this, MainActivity::class.java)
+        dialog.putExtra("sumPositive",isPositive)
+       LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(dialog)
+    }
+
+    //fonction de scan de l'api VirusTotal
     fun getFileScanReport() {
-        var isPositive : Int  = 0
-        var niveauxRisque = 0
+
+        var resource:String
         try {
             VirusTotalConfig.getConfigInstance().virusTotalAPIKey = "918a101ad416e878a01a5ec5c2ee0ed06215db8ba0b09e28cc70b7b08a218525"
             val virusTotalRef: VirustotalPublicV2 = VirustotalPublicV2Impl()
 
-            val resource ="4fd9275fce5dee2d5c1ac52e2fd0e303"  // "4fd9275fce5dee2d5c1ac52e2fd0e303"
-            val report = virusTotalRef.getScanReport(resource)
-            println("Positives :\t" + report.positives)
-            println("Total :\t" + report.total)
-            if(report.positives == 1)
-                isPositive++
+            //pour ouvrir le fichier
+            val file: FileInputStream = openFileInput("data.txt") //1
+            val inputStreamReader:InputStreamReader = InputStreamReader(file) //2
+            val bufferedReader : BufferedReader = BufferedReader(inputStreamReader) //3
 
-            niveauxRisque=isPositive/100
-            println("Niveau de risque :\t"+niveauxRisque)
+           // pour lire ligne par ligne car chaque ligne de notre fichier data.txt correspond à une appli
+            var line: String=bufferedReader.readLine()
 
-            val intent: Intent=Intent("message")
-           // var bundle = Bundle()
-           // bundle.putString("keyValue", niveauxRisque.toString())
-            intent.putExtra("number",niveauxRisque)
-           // intent.putExtra("successB",bundle)
-            LocalBroadcastManager.getInstance(this).sendBroadcast(intent)
+            while(line!=null){
+                resource = line
+                println(resource)
+                val report = virusTotalRef.getScanReport(resource)
+               var positive= report.positives
+                var sum=report.total
+                var verbose=report.verboseMessage
+
+               if(positive==1)
+                   isPositive++//"virus a été détéctée"
+
+                println("Positives :\t" + positive)
+                println("Total :\t" + sum)
+            }
 
         } catch (ex: APIKeyNotFoundException) {
             System.err.println("API Key not found! " + ex.message)
@@ -80,11 +103,9 @@ class MyService2 : Service() {
         } catch (ex: Exception) {
             System.err.println("Something Bad Happened! " + ex.message)
         }
-
-
     }
 
-
+    //Solution pour l'erreur que j'ai eu de RuntimeException
     @RequiresApi(Build.VERSION_CODES.O)
     private fun createNotificationChannel(channelId: String, channelName: String): String{
         val chan = NotificationChannel(channelId,
@@ -100,8 +121,6 @@ class MyService2 : Service() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 createNotificationChannel("my_service", "My Background Service")
             } else {
-                // If earlier version channel ID is not used
-                // https://developer.android.com/reference/android/support/v4/app/NotificationCompat.Builder.html#NotificationCompat.Builder(android.content.Context)
                 ""
             }
 

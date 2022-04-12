@@ -2,5 +2,7 @@
     <string name="app_name">PradeoDevApp</string>
     <!-- get installed apps -->
     <string name="listeApp">Applications téléchargées</string>
+    <string name="hashFile">Calcul Hash File</string>
     <string name="scan">Scanner</string>
+    <string name="res">Résultat</string>
 </resources>

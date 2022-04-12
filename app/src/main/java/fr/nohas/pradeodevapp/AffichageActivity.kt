@@ -9,6 +9,7 @@ import android.widget.ListView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
+//Activité qui s'occupe de l'affichage de la liste des appli installées
 class AffichageActivity : AppCompatActivity() {
     private lateinit var listView1 : ListView
     private lateinit var textView : TextView
@@ -25,6 +26,7 @@ class AffichageActivity : AppCompatActivity() {
 
         textView.setText("Nombre d'application installer= "+listApplication.size)
 
+// on fait une boucle qui parcours toutes les applications pour récupérer uniquement le nom ensuite on les met dans une liste de string pour l'afficher
         var strName:String
          for(app in listApplication){
              strName =packageManager.getApplicationLabel(app.applicationInfo).toString()
@@ -35,5 +37,7 @@ class AffichageActivity : AppCompatActivity() {
         listView1.adapter=adapter
 
     }
+
+
 
 }
